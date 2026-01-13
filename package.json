@@ -1,0 +1,27 @@
+{
+  "name": "astro-mike-taylor",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.3.13",
+    "@sanity/astro": "^3.2.11",
+    "@sanity/client": "^7.14.0",
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/canvas-confetti": "^1.9.0",
+    "astro": "^5.16.9",
+    "astro-portabletext": "^0.13.0",
+    "canvas-confetti": "^1.9.4",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-is": "^19.2.3",
+    "sanity": "^5.2.0",
+    "styled-components": "^6.3.5",
+    "tailwindcss": "^4.1.18"
+  }
+}
