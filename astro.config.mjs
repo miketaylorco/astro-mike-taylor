@@ -11,7 +11,7 @@ export default defineConfig({
   integrations: [
     // 👇 update these lines
     sanity({
-      projectId: "xgztagdf",
+      projectId: "0f5m14sf",
       dataset: "production",
       useCdn: false, // for static builds
     }),
