@@ -4,6 +4,9 @@ import { sanityClient } from "sanity:client";
 import { createImageUrlBuilder, type SanityImageSource } from "@sanity/image-url";
 import { PortableText } from "astro-portabletext";
 
+import Main from '../../layouts/main.astro';
+const contentProps = { title: "Posts" };
+
 const POST_QUERY = `*[_type == "post" && slug.current == $slug][0]`;
 const post = await sanityClient.fetch<SanityDocument>(POST_QUERY, Astro.params);
 
@@ -24,6 +27,7 @@ const postImageUrl = post.image
   : null;
 ---
 
+<Main content={contentProps}>
 <main class="container mx-auto min-h-screen max-w-3xl p-8 flex flex-col gap-4">
   <a href="/posts" class="hover:underline">&larr; Back to posts</a>
   {
@@ -43,3 +47,4 @@ const postImageUrl = post.image
     {Array.isArray(post.body) && <PortableText value={post.body} />}
   </div>
 </main>
+</Main>
