@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm info:*)"
+      "Bash(npm info:*)",
+      "mcp__Sanity__get_schema"
     ]
   }
 }

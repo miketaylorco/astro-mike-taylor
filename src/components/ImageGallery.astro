@@ -18,6 +18,21 @@ const gridColsClass = {
   3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
   4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
 }[columns] || "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+
+// Extract video ID from YouTube URL
+function getYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// Use items if available, fall back to images for backwards compatibility
+const items = node.items || node.images || [];
 ---
 
 <div class="my-6">
@@ -25,83 +40,167 @@ const gridColsClass = {
 
   {layout === "grid" && (
     <div class={`grid ${gridColsClass} gap-4`}>
-      {node.images?.map((item: any) => {
-        const imageUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
-        return imageUrl && (
-          <figure>
-            <img
-              src={imageUrl}
-              alt={item.alt || ""}
-              class="rounded-lg w-full h-48 object-cover"
-            />
-            {item.caption && (
-              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
-            )}
-          </figure>
-        );
+      {items.map((item: any) => {
+        if (item._type === "galleryVideo") {
+          const videoId = item.url ? getYouTubeId(item.url) : null;
+          return videoId && (
+            <figure>
+              <div class="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={item.title || "YouTube video"}
+                  class="w-full h-full rounded-lg"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              {item.title && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.title}</figcaption>
+              )}
+            </figure>
+          );
+        } else {
+          const imageUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
+          return imageUrl && (
+            <figure>
+              <img
+                src={imageUrl}
+                alt={item.alt || ""}
+                class="rounded-lg w-full h-48 object-cover"
+              />
+              {item.caption && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+              )}
+            </figure>
+          );
+        }
       })}
     </div>
   )}
 
   {layout === "masonry" && (
     <div class={`columns-1 sm:columns-2 lg:columns-${columns} gap-4`}>
-      {node.images?.map((item: any) => {
-        const imageUrl = item.image ? urlFor(item.image)?.width(400).url() : null;
-        return imageUrl && (
-          <figure class="mb-4 break-inside-avoid">
-            <img
-              src={imageUrl}
-              alt={item.alt || ""}
-              class="rounded-lg w-full"
-            />
-            {item.caption && (
-              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
-            )}
-          </figure>
-        );
+      {items.map((item: any) => {
+        if (item._type === "galleryVideo") {
+          const videoId = item.url ? getYouTubeId(item.url) : null;
+          return videoId && (
+            <figure class="mb-4 break-inside-avoid">
+              <div class="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={item.title || "YouTube video"}
+                  class="w-full h-full rounded-lg"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              {item.title && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.title}</figcaption>
+              )}
+            </figure>
+          );
+        } else {
+          const imageUrl = item.image ? urlFor(item.image)?.width(400).url() : null;
+          return imageUrl && (
+            <figure class="mb-4 break-inside-avoid">
+              <img
+                src={imageUrl}
+                alt={item.alt || ""}
+                class="rounded-lg w-full"
+              />
+              {item.caption && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+              )}
+            </figure>
+          );
+        }
       })}
     </div>
   )}
 
   {layout === "carousel" && (
     <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4">
-      {node.images?.map((item: any) => {
-        const imageUrl = item.image ? urlFor(item.image)?.width(600).height(400).url() : null;
-        return imageUrl && (
-          <figure class="flex-shrink-0 snap-center w-4/5 sm:w-2/3">
-            <img
-              src={imageUrl}
-              alt={item.alt || ""}
-              class="rounded-lg w-full"
-            />
-            {item.caption && (
-              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
-            )}
-          </figure>
-        );
+      {items.map((item: any) => {
+        if (item._type === "galleryVideo") {
+          const videoId = item.url ? getYouTubeId(item.url) : null;
+          return videoId && (
+            <figure class="flex-shrink-0 snap-center w-4/5 sm:w-2/3">
+              <div class="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={item.title || "YouTube video"}
+                  class="w-full h-full rounded-lg"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              {item.title && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.title}</figcaption>
+              )}
+            </figure>
+          );
+        } else {
+          const imageUrl = item.image ? urlFor(item.image)?.width(600).height(400).url() : null;
+          return imageUrl && (
+            <figure class="flex-shrink-0 snap-center w-4/5 sm:w-2/3">
+              <img
+                src={imageUrl}
+                alt={item.alt || ""}
+                class="rounded-lg w-full"
+              />
+              {item.caption && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+              )}
+            </figure>
+          );
+        }
       })}
     </div>
   )}
 
   {layout === "lightbox" && (
     <div class={`grid ${gridColsClass} gap-4`}>
-      {node.images?.map((item: any) => {
-        const thumbUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
-        const fullUrl = item.image ? urlFor(item.image)?.width(1200).url() : null;
-        return thumbUrl && (
-          <a href={fullUrl} target="_blank" rel="noopener" class="block">
+      {items.map((item: any) => {
+        if (item._type === "galleryVideo") {
+          const videoId = item.url ? getYouTubeId(item.url) : null;
+          return videoId && (
             <figure>
-              <img
-                src={thumbUrl}
-                alt={item.alt || ""}
-                class="rounded-lg w-full h-48 object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
-              />
-              {item.caption && (
-                <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+              <div class="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={item.title || "YouTube video"}
+                  class="w-full h-full rounded-lg"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              {item.title && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.title}</figcaption>
               )}
             </figure>
-          </a>
-        );
+          );
+        } else {
+          const thumbUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
+          const fullUrl = item.image ? urlFor(item.image)?.width(1200).url() : null;
+          return thumbUrl && (
+            <a href={fullUrl} target="_blank" rel="noopener" class="block">
+              <figure>
+                <img
+                  src={thumbUrl}
+                  alt={item.alt || ""}
+                  class="rounded-lg w-full h-48 object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
+                />
+                {item.caption && (
+                  <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+                )}
+              </figure>
+            </a>
+          );
+        }
       })}
     </div>
   )}
