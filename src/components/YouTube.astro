@@ -1,0 +1,35 @@
+---
+const { node } = Astro.props;
+
+// Extract video ID from YouTube URL
+function getYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+const videoId = node.url ? getYouTubeId(node.url) : null;
+---
+
+{videoId && (
+  <figure class="my-6">
+    <div class="aspect-video">
+      <iframe
+        src={`https://www.youtube.com/embed/${videoId}`}
+        title={node.title || "YouTube video"}
+        class="w-full h-full rounded-lg"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+      ></iframe>
+    </div>
+    {node.title && (
+      <figcaption class="text-sm text-gray-600 mt-2">{node.title}</figcaption>
+    )}
+  </figure>
+)}

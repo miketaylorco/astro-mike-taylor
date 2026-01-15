@@ -3,6 +3,9 @@ import type { SanityDocument } from "@sanity/client";
 import { sanityClient } from "sanity:client";
 import { createImageUrlBuilder, type SanityImageSource } from "@sanity/image-url";
 import { PortableText } from "astro-portabletext";
+import ImageWithCaption from "../../components/ImageWithCaption.astro";
+import YouTube from "../../components/YouTube.astro";
+import ImageGallery from "../../components/ImageGallery.astro";
 
 const POST_QUERY = `*[_type == "post" && slug.current == $slug][0]`;
 const post = await sanityClient.fetch<SanityDocument>(POST_QUERY, Astro.params);
@@ -40,6 +43,17 @@ const postImageUrl = post.image
   <h1 class="text-4xl font-bold mb-8">{post.title}</h1>
   <div class="prose">
     <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
-    {Array.isArray(post.body) && <PortableText value={post.body} />}
+    {Array.isArray(post.body) && (
+      <PortableText
+        value={post.body}
+        components={{
+          type: {
+            imageWithCaption: ImageWithCaption,
+            youtube: YouTube,
+            imageGallery: ImageGallery,
+          },
+        }}
+      />
+    )}
   </div>
 </main>

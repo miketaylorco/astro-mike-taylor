@@ -1,0 +1,108 @@
+---
+import { sanityClient } from "sanity:client";
+import { createImageUrlBuilder, type SanityImageSource } from "@sanity/image-url";
+
+const { node } = Astro.props;
+
+const { projectId, dataset } = sanityClient.config();
+const urlFor = (source: SanityImageSource) =>
+  projectId && dataset
+    ? createImageUrlBuilder({ projectId, dataset }).image(source)
+    : null;
+
+const layout = node.layout || "grid";
+const columns = node.columns || 3;
+
+const gridColsClass = {
+  2: "grid-cols-1 sm:grid-cols-2",
+  3: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
+}[columns] || "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
+---
+
+<div class="my-6">
+  {node.title && <h3 class="text-xl font-semibold mb-4">{node.title}</h3>}
+
+  {layout === "grid" && (
+    <div class={`grid ${gridColsClass} gap-4`}>
+      {node.images?.map((item: any) => {
+        const imageUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
+        return imageUrl && (
+          <figure>
+            <img
+              src={imageUrl}
+              alt={item.alt || ""}
+              class="rounded-lg w-full h-48 object-cover"
+            />
+            {item.caption && (
+              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+            )}
+          </figure>
+        );
+      })}
+    </div>
+  )}
+
+  {layout === "masonry" && (
+    <div class={`columns-1 sm:columns-2 lg:columns-${columns} gap-4`}>
+      {node.images?.map((item: any) => {
+        const imageUrl = item.image ? urlFor(item.image)?.width(400).url() : null;
+        return imageUrl && (
+          <figure class="mb-4 break-inside-avoid">
+            <img
+              src={imageUrl}
+              alt={item.alt || ""}
+              class="rounded-lg w-full"
+            />
+            {item.caption && (
+              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+            )}
+          </figure>
+        );
+      })}
+    </div>
+  )}
+
+  {layout === "carousel" && (
+    <div class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4">
+      {node.images?.map((item: any) => {
+        const imageUrl = item.image ? urlFor(item.image)?.width(600).height(400).url() : null;
+        return imageUrl && (
+          <figure class="flex-shrink-0 snap-center w-4/5 sm:w-2/3">
+            <img
+              src={imageUrl}
+              alt={item.alt || ""}
+              class="rounded-lg w-full"
+            />
+            {item.caption && (
+              <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+            )}
+          </figure>
+        );
+      })}
+    </div>
+  )}
+
+  {layout === "lightbox" && (
+    <div class={`grid ${gridColsClass} gap-4`}>
+      {node.images?.map((item: any) => {
+        const thumbUrl = item.image ? urlFor(item.image)?.width(400).height(300).url() : null;
+        const fullUrl = item.image ? urlFor(item.image)?.width(1200).url() : null;
+        return thumbUrl && (
+          <a href={fullUrl} target="_blank" rel="noopener" class="block">
+            <figure>
+              <img
+                src={thumbUrl}
+                alt={item.alt || ""}
+                class="rounded-lg w-full h-48 object-cover hover:opacity-90 transition-opacity cursor-zoom-in"
+              />
+              {item.caption && (
+                <figcaption class="text-sm text-gray-600 mt-1">{item.caption}</figcaption>
+              )}
+            </figure>
+          </a>
+        );
+      })}
+    </div>
+  )}
+</div>

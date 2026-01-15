@@ -1,0 +1,30 @@
+---
+import { sanityClient } from "sanity:client";
+import { createImageUrlBuilder, type SanityImageSource } from "@sanity/image-url";
+
+const { node } = Astro.props;
+
+const { projectId, dataset } = sanityClient.config();
+const urlFor = (source: SanityImageSource) =>
+  projectId && dataset
+    ? createImageUrlBuilder({ projectId, dataset }).image(source)
+    : null;
+
+const imageUrl = node.image ? urlFor(node.image)?.width(800).url() : null;
+---
+
+{imageUrl && (
+  <figure class="my-6">
+    <img
+      src={imageUrl}
+      alt={node.alt || ""}
+      class="rounded-lg w-full"
+    />
+    {(node.caption || node.attribution) && (
+      <figcaption class="text-sm text-gray-600 mt-2">
+        {node.caption}
+        {node.attribution && <span class="italic"> — {node.attribution}</span>}
+      </figcaption>
+    )}
+  </figure>
+)}
