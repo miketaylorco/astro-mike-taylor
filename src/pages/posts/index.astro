@@ -2,6 +2,9 @@
 import type { SanityDocument } from "@sanity/client";
 import { sanityClient } from "sanity:client";
 
+import Main from '../../layouts/main.astro';
+const contentProps = { title: "Posts" };
+
 const POSTS_QUERY = `*[
   _type == "post"
   && defined(slug.current)
@@ -10,6 +13,7 @@ const POSTS_QUERY = `*[
 const posts = await sanityClient.fetch<SanityDocument[]>(POSTS_QUERY);
 ---
 
+<Main content={contentProps}>
 <main class="container mx-auto min-h-screen max-w-3xl p-8">
   <h1 class="text-4xl font-bold mb-8">{posts.length} Post{posts.length != 1 && "s"}</h1>
   <ul class="flex flex-col gap-y-4">
@@ -23,3 +27,4 @@ const posts = await sanityClient.fetch<SanityDocument[]>(POSTS_QUERY);
       ))}
   </ul>
 </main>
+</Main>
