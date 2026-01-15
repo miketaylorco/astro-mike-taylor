@@ -1,0 +1,64 @@
+---
+/**
+ * Custom block component for PortableText that handles custom text styles.
+ * Renders lead, small, and callout styles with appropriate formatting.
+ */
+const { node } = Astro.props;
+const style = node.style || "normal";
+---
+
+{style === "lead" && (
+  <p class="text-xl text-gray-700 leading-relaxed mb-6 first:mt-0">
+    <slot />
+  </p>
+)}
+
+{style === "small" && (
+  <p class="text-sm text-gray-500 mb-4">
+    <slot />
+  </p>
+)}
+
+{style === "callout" && (
+  <div class="bg-amber-50 border-l-4 border-amber-400 p-4 my-6 rounded-r-lg">
+    <p class="text-amber-900">
+      <slot />
+    </p>
+  </div>
+)}
+
+{style === "blockquote" && (
+  <blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-6">
+    <slot />
+  </blockquote>
+)}
+
+{style === "h1" && (
+  <h1 class="text-4xl font-bold mt-8 mb-4">
+    <slot />
+  </h1>
+)}
+
+{style === "h2" && (
+  <h2 class="text-3xl font-bold mt-8 mb-3">
+    <slot />
+  </h2>
+)}
+
+{style === "h3" && (
+  <h3 class="text-2xl font-semibold mt-6 mb-3">
+    <slot />
+  </h3>
+)}
+
+{style === "h4" && (
+  <h4 class="text-xl font-semibold mt-6 mb-2">
+    <slot />
+  </h4>
+)}
+
+{style === "normal" && (
+  <p class="mb-4">
+    <slot />
+  </p>
+)}

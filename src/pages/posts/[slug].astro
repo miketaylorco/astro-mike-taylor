@@ -6,6 +6,7 @@ import { PortableText } from "astro-portabletext";
 import ImageWithCaption from "../../components/ImageWithCaption.astro";
 import YouTube from "../../components/YouTube.astro";
 import ImageGallery from "../../components/ImageGallery.astro";
+import PortableTextBlock from "../../components/PortableTextBlock.astro";
 
 import Main from '../../layouts/main.astro';
 const contentProps = { title: "Posts" };
@@ -55,6 +56,17 @@ const postImageUrl = post.image
             imageWithCaption: ImageWithCaption,
             youtube: YouTube,
             imageGallery: ImageGallery,
+          },
+          block: {
+            lead: PortableTextBlock,
+            small: PortableTextBlock,
+            callout: PortableTextBlock,
+            blockquote: PortableTextBlock,
+            h1: PortableTextBlock,
+            h2: PortableTextBlock,
+            h3: PortableTextBlock,
+            h4: PortableTextBlock,
+            normal: PortableTextBlock,
           },
         }}
       />
