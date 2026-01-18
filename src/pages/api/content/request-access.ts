@@ -5,14 +5,10 @@ import { sendAccessRequestEmail } from '../../../lib/email';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  console.log('[request-access] Starting request');
-
   // Check if user is authenticated
   const user = await getUser(cookies);
-  console.log('[request-access] User:', user ? user.email : 'null');
 
   if (!user) {
-    console.log('[request-access] No user found, returning 401');
     return new Response(JSON.stringify({ error: 'Authentication required' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -34,8 +30,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const supabaseAdmin = createSupabaseAdminClient();
 
   try {
-    console.log('[request-access] Processing access request for user:', user.id, 'document:', documentId);
-
     // Check if there's an existing request
     const { data: existingRequest } = await supabaseAdmin
       .from('access_requests')
@@ -49,7 +43,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     if (existingRequest) {
       if (existingRequest.status === 'pending') {
         // Already has a pending request
-        console.log('[request-access] Already has pending request');
         return new Response(JSON.stringify({
           success: true,
           message: 'You have already requested access to this article'
@@ -60,7 +53,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
 
       // Previous request was approved/denied - update it back to pending
-      console.log('[request-access] Updating existing request to pending');
       const result = await supabaseAdmin
         .from('access_requests')
         .update({
@@ -74,7 +66,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       error = result.error;
     } else {
       // No existing request - insert new one
-      console.log('[request-access] Inserting new access request');
       const result = await supabaseAdmin.from('access_requests').insert({
         user_id: user.id,
         sanity_document_id: documentId,
@@ -85,26 +76,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     }
 
     if (error) {
-      console.error('[request-access] Database error:', error);
+      console.error('Access request error:', error);
       return new Response(JSON.stringify({ error: 'Failed to submit request' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('[request-access] Insert successful, sending email');
-
     // Send email notification to admins
     const origin = new URL(request.url).origin;
-    const emailSent = await sendAccessRequestEmail({
+    await sendAccessRequestEmail({
       userEmail: user.email || 'Unknown',
       postTitle: postTitle || documentId,
       documentId,
       message: message || undefined,
       adminUrl: `${origin}/admin`,
     });
-
-    console.log('[request-access] Email sent:', emailSent);
 
     return new Response(JSON.stringify({
       success: true,
