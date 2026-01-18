@@ -82,28 +82,41 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
       // Send email notification to the user
       try {
+        console.log('[respond-request] Fetching profile for userId:', userId);
+
         // Get user's email
-        const { data: profile } = await supabaseAdmin
+        const { data: profile, error: profileError } = await supabaseAdmin
           .from('profiles')
           .select('email')
           .eq('id', userId)
           .single();
 
+        console.log('[respond-request] Profile result:', profile, 'Error:', profileError);
+
         // Get article details from Sanity
+        console.log('[respond-request] Fetching article for documentId:', documentId);
         const article = await sanityClient.fetch(
           `*[_id == $documentId][0]{ title, "slug": slug.current }`,
           { documentId }
         );
 
+        console.log('[respond-request] Article result:', article);
+
         if (profile?.email && article) {
           const origin = new URL(request.url).origin;
           const postUrl = `${origin}/posts/${article.slug}`;
 
-          await sendAccessGrantedEmail({
+          console.log('[respond-request] Sending email to:', profile.email, 'postUrl:', postUrl);
+
+          const emailSent = await sendAccessGrantedEmail({
             userEmail: profile.email,
             postTitle: article.title,
             postUrl,
           });
+
+          console.log('[respond-request] Email sent result:', emailSent);
+        } else {
+          console.log('[respond-request] Missing data - profile.email:', profile?.email, 'article:', !!article);
         }
       } catch (emailError) {
         // Don't fail the request if email fails - access was still granted
