@@ -1,7 +1,7 @@
 ---
 import type { SanityDocument } from "@sanity/client";
 import { sanityClient } from "sanity:client";
-import { getUser } from "../../lib/supabase";
+import { getUser, createSupabaseAdminClient, isAdmin } from "../../lib/supabase";
 
 import Main from '../../layouts/main.astro';
 
@@ -13,6 +13,7 @@ const contentProps = { title: "Posts" };
 // Check if user is authenticated
 const user = await getUser(Astro.cookies);
 const isAuthenticated = !!user;
+const userIsAdmin = isAdmin(user?.email);
 
 const POSTS_QUERY = `*[
   _type == "post"
@@ -26,6 +27,32 @@ const POSTS_QUERY = `*[
 }`;
 
 const posts = await sanityClient.fetch<SanityDocument[]>(POSTS_QUERY);
+
+// For authenticated users, check which protected posts they have access to
+let accessiblePostIds = new Set<string>();
+
+if (isAuthenticated && user) {
+  if (userIsAdmin) {
+    // Admins have access to all posts
+    accessiblePostIds = new Set(posts.filter(p => p.accessLevel === 'protected').map(p => p._id));
+  } else {
+    // Check article_access table for this user
+    const supabaseAdmin = createSupabaseAdminClient();
+    const protectedPostIds = posts.filter(p => p.accessLevel === 'protected').map(p => p._id);
+
+    if (protectedPostIds.length > 0) {
+      const { data: accessRecords } = await supabaseAdmin
+        .from('article_access')
+        .select('sanity_document_id')
+        .eq('user_id', user.id)
+        .in('sanity_document_id', protectedPostIds);
+
+      if (accessRecords) {
+        accessiblePostIds = new Set(accessRecords.map(r => r.sanity_document_id));
+      }
+    }
+  }
+}
 ---
 
 <Main content={contentProps}>
@@ -47,12 +74,21 @@ const posts = await sanityClient.fetch<SanityDocument[]>(POSTS_QUERY);
               <p class="text-gray-600">{new Date(post.publishedAt).toLocaleDateString()}</p>
             </div>
             {post.accessLevel === 'protected' && (
-              <div class="flex-shrink-0 inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                Protected
-              </div>
+              accessiblePostIds.has(post._id) ? (
+                <div class="flex-shrink-0 inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  </svg>
+                  Unlocked
+                </div>
+              ) : (
+                <div class="flex-shrink-0 inline-flex items-center gap-1 bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Protected
+                </div>
+              )
             )}
           </div>
         </a>
