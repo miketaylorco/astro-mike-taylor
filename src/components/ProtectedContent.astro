@@ -114,22 +114,13 @@ const { documentId, isAuthenticated, returnUrl = '', postTitle = 'this article' 
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    console.log('[Client] ProtectedContent script running');
     const container = document.querySelector('.protected-content');
-    if (!container) {
-      console.log('[Client] No .protected-content container found');
-      return;
-    }
+    if (!container) return;
 
     const documentId = container.getAttribute('data-document-id');
     const isAuthenticated = container.getAttribute('data-authenticated') === 'true';
 
-    console.log('[Client] documentId:', documentId, 'isAuthenticated:', isAuthenticated);
-
-    if (!isAuthenticated || !documentId) {
-      console.log('[Client] Skipping fetch - not authenticated or no documentId');
-      return;
-    }
+    if (!isAuthenticated || !documentId) return;
 
     const loadingState = container.querySelector('.loading-state');
     const loadedContent = container.querySelector('.loaded-content');
@@ -138,10 +129,8 @@ const { documentId, isAuthenticated, returnUrl = '', postTitle = 'this article' 
     const errorMessage = container.querySelector('.error-message');
 
     async function fetchProtectedContent() {
-      console.log('[Client] Fetching protected content from /api/content/' + documentId);
       try {
         const response = await fetch(`/api/content/${documentId}`);
-        console.log('[Client] Response status:', response.status);
         const data = await response.json();
 
         if (response.status === 403) {

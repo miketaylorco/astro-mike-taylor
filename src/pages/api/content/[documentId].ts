@@ -16,8 +16,6 @@ const sanityClient = createClient({
 export const GET: APIRoute = async ({ params, cookies, request }) => {
   const { documentId } = params;
 
-  console.log('[API] Content request for documentId:', documentId);
-
   if (!documentId) {
     return new Response(JSON.stringify({ error: 'Document ID is required' }), {
       status: 400,
@@ -27,7 +25,6 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
 
   // Get the authenticated user
   const user = await getUser(cookies);
-  console.log('[API] User:', user ? user.email : 'not authenticated');
 
   if (!user) {
     return new Response(JSON.stringify({ error: 'Authentication required' }), {
@@ -76,9 +73,7 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
     : request.headers.get('x-real-ip') || undefined;
   const userAgent = request.headers.get('user-agent') || undefined;
 
-  console.log('[API] Logging access for user:', user.id, 'document:', documentId);
   await logContentAccess(user.id, documentId, ipAddress, userAgent);
-  console.log('[API] Access logged');
 
   // Return the protected content
   return new Response(JSON.stringify({ body: post.body }), {

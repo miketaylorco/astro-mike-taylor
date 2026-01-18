@@ -141,8 +141,6 @@ export async function logContentAccess(
 
   if (error) {
     console.error('Failed to log content access:', JSON.stringify(error, null, 2));
-  } else {
-    console.log('Content access logged:', { userId, sanityDocumentId });
   }
 }
 
