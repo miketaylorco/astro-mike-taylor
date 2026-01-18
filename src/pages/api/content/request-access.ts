@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient } from '../../../lib/supabase';
+import { sendAccessRequestEmail } from '../../../lib/email';
 
 export const prerender = false;
 
@@ -55,6 +56,16 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    // Send email notification to admins
+    const origin = new URL(request.url).origin;
+    await sendAccessRequestEmail({
+      userEmail: user.email || 'Unknown',
+      postTitle: postTitle || documentId,
+      documentId,
+      message: message || undefined,
+      adminUrl: `${origin}/admin`,
+    });
 
     return new Response(JSON.stringify({
       success: true,
