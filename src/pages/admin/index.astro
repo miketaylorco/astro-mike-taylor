@@ -34,6 +34,13 @@ const { data: recentLogs } = await supabaseAdmin
   .order('accessed_at', { ascending: false })
   .limit(20);
 
+// Get pending access requests
+const { data: pendingRequests } = await supabaseAdmin
+  .from('access_requests')
+  .select('*, profiles(email, display_name)')
+  .eq('status', 'pending')
+  .order('requested_at', { ascending: false });
+
 // Get protected articles from Sanity
 const protectedArticles = await sanityClient.fetch(`
   *[_type == "post" && accessLevel == "protected"]{
@@ -43,10 +50,17 @@ const protectedArticles = await sanityClient.fetch(`
   }
 `);
 
+// Create a map of document IDs to article info for easy lookup
+const articleMap = new Map<string, { title: string; slug: string }>();
+protectedArticles?.forEach((article: any) => {
+  articleMap.set(article._id, { title: article.title, slug: article.slug.current });
+});
+
 // Stats
 const totalUsers = users?.length || 0;
 const totalProtectedArticles = protectedArticles?.length || 0;
 const recentActivityCount = recentLogs?.length || 0;
+const pendingRequestsCount = pendingRequests?.length || 0;
 ---
 
 <Main content={contentProps}>
@@ -60,7 +74,7 @@ const recentActivityCount = recentLogs?.length || 0;
   </div>
 
   <!-- Quick Stats -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
       <div class="text-3xl font-bold text-blue-600">{totalUsers}</div>
       <div class="text-gray-600">Total Users</div>
@@ -72,6 +86,10 @@ const recentActivityCount = recentLogs?.length || 0;
     <div class="bg-white rounded-lg shadow p-6">
       <div class="text-3xl font-bold text-green-600">{recentActivityCount}</div>
       <div class="text-gray-600">Recent Views</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="text-3xl font-bold text-purple-600">{pendingRequestsCount}</div>
+      <div class="text-gray-600">Pending Requests</div>
     </div>
   </div>
 
@@ -90,6 +108,52 @@ const recentActivityCount = recentLogs?.length || 0;
       </a>
     </div>
   </div>
+
+  <!-- Pending Access Requests -->
+  {pendingRequests && pendingRequests.length > 0 && (
+    <div class="bg-white rounded-lg shadow p-6 mb-8 border-l-4 border-purple-500">
+      <h2 class="text-xl font-semibold mb-4">Pending Access Requests</h2>
+      <ul class="divide-y divide-gray-200">
+        {pendingRequests.map((request: any) => {
+          const article = articleMap.get(request.sanity_document_id);
+          return (
+            <li class="py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <div class="font-medium">{request.profiles?.display_name || request.profiles?.email}</div>
+                  <div class="text-sm text-gray-600 mt-1">
+                    Requesting access to: <span class="font-medium">{article?.title || request.post_title || request.sanity_document_id}</span>
+                  </div>
+                  {request.message && (
+                    <div class="text-sm text-gray-500 mt-2 italic">"{request.message}"</div>
+                  )}
+                  <div class="text-xs text-gray-400 mt-2">
+                    {new Date(request.requested_at).toLocaleString()}
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    class="approve-request px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                    data-user-id={request.user_id}
+                    data-document-id={request.sanity_document_id}
+                    data-request-id={request.id}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="deny-request px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700"
+                    data-request-id={request.id}
+                  >
+                    Deny
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  )}
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <!-- Users List -->
@@ -116,29 +180,32 @@ const recentActivityCount = recentLogs?.length || 0;
       )}
     </div>
 
-    <!-- Recent Activity -->
+    <!-- Recent Article Views -->
     <div class="bg-white rounded-lg shadow p-6">
-      <h2 class="text-xl font-semibold mb-4">Recent Activity</h2>
+      <h2 class="text-xl font-semibold mb-4">Recent Article Views</h2>
       {recentLogs && recentLogs.length > 0 ? (
         <ul class="divide-y divide-gray-200">
-          {recentLogs.slice(0, 10).map((log: any) => (
-            <li class="py-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="font-medium">{log.profiles?.display_name || log.profiles?.email || 'Unknown'}</div>
-                  <div class="text-sm text-gray-500 truncate max-w-[200px]">
-                    Viewed: {log.sanity_document_id}
+          {recentLogs.slice(0, 10).map((log: any) => {
+            const article = articleMap.get(log.sanity_document_id);
+            return (
+              <li class="py-3">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium truncate">{log.profiles?.display_name || log.profiles?.email || 'Unknown'}</div>
+                    <div class="text-sm text-gray-600 truncate">
+                      {article?.title || log.sanity_document_id}
+                    </div>
+                  </div>
+                  <div class="text-sm text-gray-400 whitespace-nowrap">
+                    {new Date(log.accessed_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div class="text-sm text-gray-400">
-                  {new Date(log.accessed_at).toLocaleDateString()}
-                </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       ) : (
-        <p class="text-gray-500">No activity yet.</p>
+        <p class="text-gray-500">No views yet.</p>
       )}
     </div>
   </div>
@@ -170,3 +237,100 @@ const recentActivityCount = recentLogs?.length || 0;
   </div>
 </main>
 </Main>
+
+<script>
+  // Handle approve/deny buttons for access requests
+  document.querySelectorAll('.approve-request').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const target = e.target as HTMLButtonElement;
+      const requestId = target.dataset.requestId;
+      const userId = target.dataset.userId;
+      const documentId = target.dataset.documentId;
+
+      if (!requestId) return;
+
+      target.disabled = true;
+      target.textContent = 'Approving...';
+
+      try {
+        const response = await fetch('/api/admin/respond-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestId,
+            action: 'approve',
+            userId,
+            documentId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Remove the request item from the list
+          const listItem = target.closest('li');
+          if (listItem) {
+            listItem.style.opacity = '0.5';
+            listItem.innerHTML = '<div class="py-4 text-green-600">Access granted</div>';
+            setTimeout(() => listItem.remove(), 2000);
+          }
+        } else {
+          alert('Error: ' + (result.error || 'Failed to approve request'));
+          target.disabled = false;
+          target.textContent = 'Approve';
+        }
+      } catch (error) {
+        console.error('Error approving request:', error);
+        alert('An error occurred. Please try again.');
+        target.disabled = false;
+        target.textContent = 'Approve';
+      }
+    });
+  });
+
+  document.querySelectorAll('.deny-request').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const target = e.target as HTMLButtonElement;
+      const requestId = target.dataset.requestId;
+
+      if (!requestId) return;
+
+      if (!confirm('Are you sure you want to deny this request?')) return;
+
+      target.disabled = true;
+      target.textContent = 'Denying...';
+
+      try {
+        const response = await fetch('/api/admin/respond-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestId,
+            action: 'deny',
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Remove the request item from the list
+          const listItem = target.closest('li');
+          if (listItem) {
+            listItem.style.opacity = '0.5';
+            listItem.innerHTML = '<div class="py-4 text-red-600">Request denied</div>';
+            setTimeout(() => listItem.remove(), 2000);
+          }
+        } else {
+          alert('Error: ' + (result.error || 'Failed to deny request'));
+          target.disabled = false;
+          target.textContent = 'Deny';
+        }
+      } catch (error) {
+        console.error('Error denying request:', error);
+        alert('An error occurred. Please try again.');
+        target.disabled = false;
+        target.textContent = 'Deny';
+      }
+    });
+  });
+</script>
