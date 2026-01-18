@@ -36,18 +36,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const supabaseAdmin = createSupabaseAdminClient();
 
   try {
-    // Generate an invite link using the admin API
-    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'invite',
+    // Send invite email using the admin API
+    const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
-      options: {
-        redirectTo: `${new URL(request.url).origin}/api/auth/callback`,
-      },
-    });
+      {
+        redirectTo: `${new URL(request.url).origin}/auth/confirm`,
+      }
+    );
 
     if (inviteError) {
       console.error('Invite error:', inviteError);
-      return new Response(JSON.stringify({ error: 'Failed to generate invite' }), {
+      return new Response(JSON.stringify({ error: inviteError.message || 'Failed to send invite' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -86,8 +85,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: 'Invite sent successfully',
-      inviteLink: inviteData.properties?.action_link,
+      message: 'Invite email sent successfully',
       userId,
     }), {
       status: 200,

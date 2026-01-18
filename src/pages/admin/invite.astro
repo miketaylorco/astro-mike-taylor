@@ -103,29 +103,6 @@ const protectedArticles = await sanityClient.fetch(`
 
     <!-- Success/Error Messages -->
     <div id="message" class="hidden mt-6 p-4 rounded-lg"></div>
-
-    <!-- Invite Link Display -->
-    <div id="invite-link-container" class="hidden mt-6 p-4 bg-gray-50 rounded-lg">
-      <h3 class="font-medium mb-2">Invite Link (Backup)</h3>
-      <p class="text-sm text-gray-600 mb-3">
-        An email has been sent. If the user doesn't receive it, you can share this link directly:
-      </p>
-      <div class="flex gap-2">
-        <input
-          type="text"
-          id="invite-link"
-          readonly
-          class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded text-sm"
-        />
-        <button
-          type="button"
-          id="copy-link"
-          class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-medium"
-        >
-          Copy
-        </button>
-      </div>
-    </div>
   </div>
 </main>
 </Main>
@@ -133,9 +110,6 @@ const protectedArticles = await sanityClient.fetch(`
 <script>
   const form = document.getElementById('invite-form') as HTMLFormElement;
   const messageDiv = document.getElementById('message') as HTMLDivElement;
-  const inviteLinkContainer = document.getElementById('invite-link-container') as HTMLDivElement;
-  const inviteLinkInput = document.getElementById('invite-link') as HTMLInputElement;
-  const copyButton = document.getElementById('copy-link') as HTMLButtonElement;
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -145,7 +119,6 @@ const protectedArticles = await sanityClient.fetch(`
     submitButton.textContent = 'Sending...';
 
     messageDiv.classList.add('hidden');
-    inviteLinkContainer.classList.add('hidden');
 
     try {
       const formData = new FormData(form);
@@ -158,15 +131,9 @@ const protectedArticles = await sanityClient.fetch(`
       const data = await response.json();
 
       if (response.ok) {
-        messageDiv.textContent = 'Invite sent successfully!';
+        messageDiv.textContent = 'Invite email sent successfully!';
         messageDiv.className = 'mt-6 p-4 rounded-lg bg-green-50 text-green-700';
         messageDiv.classList.remove('hidden');
-
-        if (data.inviteLink) {
-          inviteLinkInput.value = data.inviteLink;
-          inviteLinkContainer.classList.remove('hidden');
-        }
-
         form.reset();
       } else {
         messageDiv.textContent = data.error || 'Failed to send invite';
@@ -180,24 +147,6 @@ const protectedArticles = await sanityClient.fetch(`
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = 'Send Invite';
-    }
-  });
-
-  copyButton?.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLinkInput.value);
-      copyButton.textContent = 'Copied!';
-      setTimeout(() => {
-        copyButton.textContent = 'Copy';
-      }, 2000);
-    } catch (err) {
-      // Fallback for older browsers
-      inviteLinkInput.select();
-      document.execCommand('copy');
-      copyButton.textContent = 'Copied!';
-      setTimeout(() => {
-        copyButton.textContent = 'Copy';
-      }, 2000);
     }
   });
 </script>
