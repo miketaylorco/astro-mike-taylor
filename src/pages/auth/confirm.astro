@@ -1,0 +1,94 @@
+---
+import Main from '../../layouts/main.astro';
+const contentProps = { title: "Confirming..." };
+
+// This page handles the implicit auth flow where tokens come in the URL hash
+// Hash fragments are only available client-side, so we need JavaScript
+---
+
+<Main content={contentProps}>
+<main class="container mx-auto min-h-screen max-w-md p-8 flex flex-col items-center justify-center">
+  <div class="bg-white rounded-lg shadow-lg p-8 text-center">
+    <div class="mb-6">
+      <svg class="w-16 h-16 mx-auto text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+    <h1 class="text-2xl font-bold mb-4" id="status">Confirming your account...</h1>
+    <p class="text-gray-600" id="message">Please wait while we complete the sign-in process.</p>
+  </div>
+</main>
+</Main>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+  async function handleAuthCallback() {
+    const statusEl = document.getElementById('status');
+    const messageEl = document.getElementById('message');
+
+    try {
+      // Check if we have hash parameters
+      const hash = window.location.hash;
+
+      if (!hash || hash.length < 2) {
+        // No hash, check if we have a code in query params (PKCE flow)
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+
+        if (code) {
+          // Exchange code for session
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } else {
+          throw new Error('No authentication data found');
+        }
+      } else {
+        // Parse hash parameters (implicit flow)
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          // Set the session using the tokens
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (error) throw error;
+        } else {
+          throw new Error('Missing tokens in URL');
+        }
+      }
+
+      // Success - redirect to admin or home
+      if (statusEl) statusEl.textContent = 'Success!';
+      if (messageEl) messageEl.textContent = 'Redirecting...';
+
+      // Small delay so user sees success message
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 500);
+
+    } catch (error) {
+      console.error('Auth error:', error);
+      if (statusEl) {
+        statusEl.textContent = 'Authentication Failed';
+        statusEl.className = 'text-2xl font-bold mb-4 text-red-600';
+      }
+      if (messageEl) {
+        messageEl.textContent = error instanceof Error ? error.message : 'An error occurred';
+      }
+    }
+  }
+
+  // Run on page load
+  handleAuthCallback();
+</script>
