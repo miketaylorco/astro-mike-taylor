@@ -119,12 +119,18 @@ export async function logContentAccess(
 ) {
   const supabase = createSupabaseAdminClient();
 
-  await supabase.from('content_access_log').insert({
+  const { error } = await supabase.from('content_access_log').insert({
     user_id: userId,
     sanity_document_id: sanityDocumentId,
     ip_address: ipAddress,
     user_agent: userAgent,
   });
+
+  if (error) {
+    console.error('Failed to log content access:', error);
+  } else {
+    console.log('Content access logged:', { userId, sanityDocumentId });
+  }
 }
 
 // Check if user is an admin
