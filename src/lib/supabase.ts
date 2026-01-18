@@ -1,4 +1,4 @@
-import { createServerClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr';
+import { createServerClient, serializeCookieHeader } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import type { AstroCookies } from 'astro';
 
@@ -6,6 +6,12 @@ import type { AstroCookies } from 'astro';
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Cookie names used by Supabase
+const COOKIE_NAMES = [
+  'sb-access-token',
+  'sb-refresh-token',
+];
 
 // Browser client for client-side usage
 export function createBrowserClient() {
@@ -20,7 +26,28 @@ export function createSupabaseServerClient(
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        return parseCookieHeader(cookies.get('sb-access-token')?.value ?? '');
+        const allCookies: { name: string; value: string }[] = [];
+
+        // Get known Supabase cookies
+        for (const name of COOKIE_NAMES) {
+          const cookie = cookies.get(name);
+          if (cookie?.value) {
+            allCookies.push({ name, value: cookie.value });
+          }
+        }
+
+        // Also check for project-specific cookie format (sb-<project-ref>-auth-token)
+        // Supabase uses this format in newer versions
+        const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)\./)?.[1];
+        if (projectRef) {
+          const authTokenName = `sb-${projectRef}-auth-token`;
+          const authToken = cookies.get(authTokenName);
+          if (authToken?.value) {
+            allCookies.push({ name: authTokenName, value: authToken.value });
+          }
+        }
+
+        return allCookies;
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
