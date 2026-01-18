@@ -119,15 +119,28 @@ export async function logContentAccess(
 ) {
   const supabase = createSupabaseAdminClient();
 
-  const { error } = await supabase.from('content_access_log').insert({
+  // First try with IP address
+  let { error } = await supabase.from('content_access_log').insert({
     user_id: userId,
     sanity_document_id: sanityDocumentId,
-    ip_address: ipAddress,
-    user_agent: userAgent,
+    ip_address: ipAddress || null,
+    user_agent: userAgent || null,
   });
 
+  // If IP address format is invalid, retry without it
+  if (error && error.message?.includes('ip_address')) {
+    console.warn('IP address format invalid, retrying without IP:', ipAddress);
+    const result = await supabase.from('content_access_log').insert({
+      user_id: userId,
+      sanity_document_id: sanityDocumentId,
+      ip_address: null,
+      user_agent: userAgent || null,
+    });
+    error = result.error;
+  }
+
   if (error) {
-    console.error('Failed to log content access:', error);
+    console.error('Failed to log content access:', JSON.stringify(error, null, 2));
   } else {
     console.log('Content access logged:', { userId, sanityDocumentId });
   }

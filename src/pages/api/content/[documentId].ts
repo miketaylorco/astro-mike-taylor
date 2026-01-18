@@ -69,12 +69,16 @@ export const GET: APIRoute = async ({ params, cookies, request }) => {
   }
 
   // Log the access
-  const ipAddress = request.headers.get('x-forwarded-for') ||
-                    request.headers.get('x-real-ip') ||
-                    undefined;
+  // x-forwarded-for can contain multiple IPs - take only the first one
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ipAddress = forwardedFor
+    ? forwardedFor.split(',')[0].trim()
+    : request.headers.get('x-real-ip') || undefined;
   const userAgent = request.headers.get('user-agent') || undefined;
 
+  console.log('[API] Logging access for user:', user.id, 'document:', documentId);
   await logContentAccess(user.id, documentId, ipAddress, userAgent);
+  console.log('[API] Access logged');
 
   // Return the protected content
   return new Response(JSON.stringify({ body: post.body }), {
