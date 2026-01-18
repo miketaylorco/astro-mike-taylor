@@ -22,57 +22,54 @@ const contentProps = { title: "Confirming..." };
 </Main>
 
 <script>
-  import { createClient } from '@supabase/supabase-js';
-
-  const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
   async function handleAuthCallback() {
     const statusEl = document.getElementById('status');
     const messageEl = document.getElementById('message');
 
     try {
-      // Check if we have hash parameters
+      // Check if we have hash parameters (implicit flow from invite links)
       const hash = window.location.hash;
 
-      if (!hash || hash.length < 2) {
-        // No hash, check if we have a code in query params (PKCE flow)
-        const params = new URLSearchParams(window.location.search);
-        const code = params.get('code');
+      let accessToken: string | null = null;
+      let refreshToken: string | null = null;
 
-        if (code) {
-          // Exchange code for session
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
-        } else {
-          throw new Error('No authentication data found');
-        }
-      } else {
-        // Parse hash parameters (implicit flow)
+      if (hash && hash.length > 1) {
+        // Parse hash parameters
         const hashParams = new URLSearchParams(hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-
-        if (accessToken && refreshToken) {
-          // Set the session using the tokens
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) throw error;
-        } else {
-          throw new Error('Missing tokens in URL');
-        }
+        accessToken = hashParams.get('access_token');
+        refreshToken = hashParams.get('refresh_token');
       }
 
-      // Success - redirect to admin or home
+      if (!accessToken || !refreshToken) {
+        throw new Error('No authentication tokens found in URL');
+      }
+
+      // Send tokens to server to set cookies
+      const response = await fetch('/api/auth/set-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to set session');
+      }
+
+      // Success - redirect to admin
       if (statusEl) statusEl.textContent = 'Success!';
       if (messageEl) messageEl.textContent = 'Redirecting...';
 
-      // Small delay so user sees success message
+      // Clear the hash from URL for cleanliness
+      history.replaceState(null, '', window.location.pathname);
+
+      // Redirect to admin
       setTimeout(() => {
         window.location.href = '/admin';
       }, 500);
