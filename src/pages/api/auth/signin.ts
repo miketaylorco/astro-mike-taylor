@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '../../../lib/supabase';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request, cookies, redirect }) => {
+export const POST: APIRoute = async ({ request, cookies }) => {
   const formData = await request.formData();
   const email = formData.get('email')?.toString();
   const next = formData.get('next')?.toString() || '/';
@@ -15,7 +15,9 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     });
   }
 
-  const supabase = createSupabaseServerClient(cookies);
+  // Create response headers to capture any cookies Supabase needs to set (e.g., code_verifier for PKCE)
+  const responseHeaders = new Headers();
+  const supabase = createSupabaseServerClient(cookies, responseHeaders);
 
   // Build redirect URL with the 'next' parameter
   const origin = new URL(request.url).origin;
@@ -35,6 +37,10 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     console.error('Auth error:', error.message);
   }
 
-  // Always redirect to check-email page (even on error for security)
-  return redirect('/auth/check-email');
+  // Redirect to check-email page, including any cookies that were set
+  responseHeaders.set('Location', '/auth/check-email');
+  return new Response(null, {
+    status: 302,
+    headers: responseHeaders,
+  });
 };

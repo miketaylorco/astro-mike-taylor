@@ -24,6 +24,9 @@ export function createSupabaseServerClient(
   responseHeaders?: Headers
 ) {
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      flowType: 'implicit',
+    },
     cookies: {
       getAll() {
         const allCookies: { name: string; value: string }[] = [];
@@ -36,14 +39,22 @@ export function createSupabaseServerClient(
           }
         }
 
-        // Also check for project-specific cookie format (sb-<project-ref>-auth-token)
+        // Also check for project-specific cookie formats
         // Supabase uses this format in newer versions
         const projectRef = supabaseUrl?.match(/https:\/\/([^.]+)\./)?.[1];
         if (projectRef) {
+          // Auth token cookie
           const authTokenName = `sb-${projectRef}-auth-token`;
           const authToken = cookies.get(authTokenName);
           if (authToken?.value) {
             allCookies.push({ name: authTokenName, value: authToken.value });
+          }
+
+          // PKCE code verifier cookie
+          const codeVerifierName = `sb-${projectRef}-auth-token-code-verifier`;
+          const codeVerifier = cookies.get(codeVerifierName);
+          if (codeVerifier?.value) {
+            allCookies.push({ name: codeVerifierName, value: codeVerifier.value });
           }
         }
 
