@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "Bash(npm info:*)",
-      "mcp__Sanity__get_schema"
+      "mcp__Sanity__get_schema",
+      "mcp__Sanity__list_workspace_schemas",
+      "mcp__Sanity__get_context",
+      "mcp__Sanity__query_documents",
+      "mcp__Sanity__get_sanity_rules",
+      "mcp__Sanity__search_docs",
+      "mcp__Sanity__read_docs",
+      "WebSearch",
+      "WebFetch(domain:docs.astro.build)",
+      "WebFetch(domain:supabase.com)",
+      "mcp__Sanity__deploy_schema",
+      "Bash(npm install)",
+      "Bash(npm run build:*)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "supabase"
+  ]
 }
