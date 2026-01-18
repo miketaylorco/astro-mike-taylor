@@ -243,13 +243,17 @@ const { documentId, isAuthenticated, returnUrl = '', postTitle = 'this article' 
 
       try {
         const formData = new FormData(requestForm);
+        console.log('[Client] Submitting request-access form');
+        console.log('[Client] Form data:', Object.fromEntries(formData.entries()));
 
         const response = await fetch('/api/content/request-access', {
           method: 'POST',
           body: formData,
         });
 
+        console.log('[Client] Response status:', response.status);
         const data = await response.json();
+        console.log('[Client] Response data:', data);
 
         if (response.ok) {
           requestForm.classList.add('hidden');
