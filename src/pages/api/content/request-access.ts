@@ -34,20 +34,22 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const supabaseAdmin = createSupabaseAdminClient();
 
   try {
-    console.log('[request-access] Inserting access request for user:', user.id, 'document:', documentId);
+    console.log('[request-access] Processing access request for user:', user.id, 'document:', documentId);
 
-    // Store the access request
-    const { error } = await supabaseAdmin.from('access_requests').insert({
-      user_id: user.id,
-      sanity_document_id: documentId,
-      post_title: postTitle || null,
-      message: message || null,
-    });
+    // Check if there's an existing request
+    const { data: existingRequest } = await supabaseAdmin
+      .from('access_requests')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('sanity_document_id', documentId)
+      .single();
 
-    if (error) {
-      // Check if it's a duplicate request
-      if (error.code === '23505') {
-        console.log('[request-access] Duplicate request detected');
+    let error;
+
+    if (existingRequest) {
+      if (existingRequest.status === 'pending') {
+        // Already has a pending request
+        console.log('[request-access] Already has pending request');
         return new Response(JSON.stringify({
           success: true,
           message: 'You have already requested access to this article'
@@ -57,7 +59,33 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         });
       }
 
-      console.error('[request-access] Insert error:', error);
+      // Previous request was approved/denied - update it back to pending
+      console.log('[request-access] Updating existing request to pending');
+      const result = await supabaseAdmin
+        .from('access_requests')
+        .update({
+          status: 'pending',
+          message: message || null,
+          post_title: postTitle || null,
+          requested_at: new Date().toISOString(),
+          responded_at: null,
+        })
+        .eq('id', existingRequest.id);
+      error = result.error;
+    } else {
+      // No existing request - insert new one
+      console.log('[request-access] Inserting new access request');
+      const result = await supabaseAdmin.from('access_requests').insert({
+        user_id: user.id,
+        sanity_document_id: documentId,
+        post_title: postTitle || null,
+        message: message || null,
+      });
+      error = result.error;
+    }
+
+    if (error) {
+      console.error('[request-access] Database error:', error);
       return new Response(JSON.stringify({ error: 'Failed to submit request' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
