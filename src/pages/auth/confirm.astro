@@ -62,16 +62,20 @@ const contentProps = { title: "Confirming..." };
         throw new Error(data.error || 'Failed to set session');
       }
 
-      // Success - redirect to admin
+      // Success
       if (statusEl) statusEl.textContent = 'Success!';
       if (messageEl) messageEl.textContent = 'Redirecting...';
 
       // Clear the hash from URL for cleanliness
       history.replaceState(null, '', window.location.pathname);
 
-      // Redirect to admin
+      // Check for a 'next' parameter to redirect back to original page
+      const urlParams = new URLSearchParams(window.location.search);
+      const next = urlParams.get('next') || '/';
+
+      // Redirect to the intended destination
       setTimeout(() => {
-        window.location.href = '/admin';
+        window.location.href = next;
       }, 500);
 
     } catch (error) {

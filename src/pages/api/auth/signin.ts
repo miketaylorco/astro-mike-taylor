@@ -6,6 +6,7 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   const formData = await request.formData();
   const email = formData.get('email')?.toString();
+  const next = formData.get('next')?.toString() || '/';
 
   if (!email) {
     return new Response(JSON.stringify({ error: 'Email is required' }), {
@@ -16,12 +17,16 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
 
   const supabase = createSupabaseServerClient(cookies);
 
+  // Build redirect URL with the 'next' parameter
+  const origin = new URL(request.url).origin;
+  const redirectUrl = `${origin}/auth/confirm?next=${encodeURIComponent(next)}`;
+
   // Request magic link - invite-only mode (shouldCreateUser: false)
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
       shouldCreateUser: false, // Only existing/invited users can sign in
-      emailRedirectTo: `${new URL(request.url).origin}/api/auth/callback`,
+      emailRedirectTo: redirectUrl,
     },
   });
 
