@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUser, isAdmin, createSupabaseAdminClient } from '../../../lib/supabase';
+import { sendAccessGrantedEmail } from '../../../lib/email';
+import { sanityClient } from "sanity:client";
 
 export const prerender = false;
 
@@ -58,7 +60,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
-    // If approved, grant access to the article
+    // If approved, grant access to the article and send email
     if (action === 'approve' && userId && documentId) {
       const { error: accessError } = await supabaseAdmin
         .from('article_access')
@@ -76,6 +78,36 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
         });
+      }
+
+      // Send email notification to the user
+      try {
+        // Get user's email
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        // Get article details from Sanity
+        const article = await sanityClient.fetch(
+          `*[_id == $documentId][0]{ title, "slug": slug.current }`,
+          { documentId }
+        );
+
+        if (profile?.email && article) {
+          const origin = new URL(request.url).origin;
+          const postUrl = `${origin}/posts/${article.slug}`;
+
+          await sendAccessGrantedEmail({
+            userEmail: profile.email,
+            postTitle: article.title,
+            postUrl,
+          });
+        }
+      } catch (emailError) {
+        // Don't fail the request if email fails - access was still granted
+        console.error('Failed to send access granted email:', emailError);
       }
     }
 

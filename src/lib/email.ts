@@ -13,6 +13,84 @@ interface AccessRequestEmailParams {
   adminUrl: string;
 }
 
+interface AccessGrantedEmailParams {
+  userEmail: string;
+  postTitle: string;
+  postUrl: string;
+}
+
+export async function sendAccessGrantedEmail(params: AccessGrantedEmailParams): Promise<boolean> {
+  const { userEmail, postTitle, postUrl } = params;
+
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured - skipping email notification');
+    return false;
+  }
+
+  const subject = `Access Granted: ${postTitle}`;
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a;">Access Granted!</h2>
+
+      <p>Great news! Your request to access the following article has been approved:</p>
+
+      <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #1a1a1a;">${postTitle}</h3>
+      </div>
+
+      <p>
+        <a href="${postUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+          Read Article
+        </a>
+      </p>
+
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        You can now access the full content of this article at any time.
+      </p>
+    </div>
+  `;
+
+  const textContent = `
+Access Granted!
+
+Great news! Your request to access the following article has been approved:
+
+${postTitle}
+
+Read the article here: ${postUrl}
+  `.trim();
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: userEmail,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Failed to send access granted email:', error);
+      return false;
+    }
+
+    return true;
+
+  } catch (error) {
+    console.error('Error sending access granted email:', error);
+    return false;
+  }
+}
+
 export async function sendAccessRequestEmail(params: AccessRequestEmailParams): Promise<boolean> {
   const { userEmail, postTitle, documentId, message, adminUrl } = params;
 
