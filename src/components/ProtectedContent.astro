@@ -3,12 +3,13 @@ interface Props {
   documentId: string;
   isAuthenticated: boolean;
   returnUrl?: string;
+  postTitle?: string;
 }
 
-const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
+const { documentId, isAuthenticated, returnUrl = '', postTitle = 'this article' } = Astro.props;
 ---
 
-<div class="protected-content" data-document-id={documentId} data-authenticated={isAuthenticated.toString()}>
+<div class="protected-content" data-document-id={documentId} data-authenticated={isAuthenticated.toString()} data-post-title={postTitle}>
   {isAuthenticated ? (
     <!-- Authenticated: Show loading state then fetch content -->
     <div class="content-loader">
@@ -22,6 +23,45 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
         <p class="text-gray-500 text-center mt-4">Loading protected content...</p>
       </div>
       <div class="loaded-content prose hidden"></div>
+      <div class="access-denied-state hidden">
+        <slot name="teaser" />
+        <div class="border-t border-gray-200 my-8 pt-8">
+          <div class="bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-lg p-8">
+            <div class="text-center mb-6">
+              <svg class="w-12 h-12 mx-auto text-amber-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <h3 class="text-xl font-semibold text-gray-900">Access Required</h3>
+              <p class="text-gray-600 mt-2">You don't have access to the full content of this article.</p>
+            </div>
+
+            <form action="/api/content/request-access" method="POST" class="space-y-4 request-access-form">
+              <input type="hidden" name="documentId" value={documentId} />
+              <input type="hidden" name="postTitle" value={postTitle} />
+              <div>
+                <label for="message" class="block text-sm font-medium text-gray-700 mb-1">Message (optional)</label>
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="3"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Let the admin know why you'd like access..."
+                ></textarea>
+              </div>
+              <button
+                type="submit"
+                class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Request Access
+              </button>
+            </form>
+            <div class="request-success hidden mt-4 p-4 bg-green-50 text-green-700 rounded-lg text-center">
+              Your access request has been sent to the administrator.
+            </div>
+            <div class="request-error hidden mt-4 p-4 bg-red-50 text-red-700 rounded-lg text-center"></div>
+          </div>
+        </div>
+      </div>
       <div class="error-state hidden">
         <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p class="text-red-600 font-medium">Unable to load content</p>
@@ -30,45 +70,49 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
       </div>
     </div>
   ) : (
-    <!-- Not authenticated: Show sign-in form -->
-    <div class="auth-required bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-lg p-8">
-      <div class="text-center mb-6">
-        <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-        <h3 class="text-xl font-semibold text-gray-900">Protected Content</h3>
-        <p class="text-gray-600 mt-2">Sign in to continue reading this article.</p>
-      </div>
+    <!-- Not authenticated: Show teaser + sign-in form -->
+    <div>
+      <slot name="teaser" />
+      <div class="border-t border-gray-200 my-8 pt-8">
+        <div class="auth-required bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-lg p-8">
+          <div class="text-center mb-6">
+            <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-900">Protected Content</h3>
+            <p class="text-gray-600 mt-2">Sign in to continue reading this article.</p>
+          </div>
 
-      <form action="/api/auth/signin" method="POST" class="space-y-4">
-        <input type="hidden" name="next" value={returnUrl} />
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            required
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="you@example.com"
-          />
+          <form action="/api/auth/signin" method="POST" class="space-y-4">
+            <input type="hidden" name="next" value={returnUrl} />
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="you@example.com"
+              />
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              Send Magic Link
+            </button>
+            <p class="text-xs text-gray-500 text-center">
+              This content requires an invite. If you don't have access, contact the site administrator.
+            </p>
+          </form>
         </div>
-        <button
-          type="submit"
-          class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          Send Magic Link
-        </button>
-        <p class="text-xs text-gray-500 text-center">
-          This content requires an invite. If you don't have access, contact the site administrator.
-        </p>
-      </form>
+      </div>
     </div>
   )}
 </div>
 
 <script>
-  // Client-side script to fetch protected content
   document.addEventListener('DOMContentLoaded', () => {
     const container = document.querySelector('.protected-content');
     if (!container) return;
@@ -80,6 +124,7 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
 
     const loadingState = container.querySelector('.loading-state');
     const loadedContent = container.querySelector('.loaded-content');
+    const accessDeniedState = container.querySelector('.access-denied-state');
     const errorState = container.querySelector('.error-state');
     const errorMessage = container.querySelector('.error-message');
 
@@ -87,6 +132,13 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
       try {
         const response = await fetch(`/api/content/${documentId}`);
         const data = await response.json();
+
+        if (response.status === 403) {
+          // Access denied - show teaser + request access form
+          loadingState?.classList.add('hidden');
+          accessDeniedState?.classList.remove('hidden');
+          return;
+        }
 
         if (!response.ok) {
           throw new Error(data.error || 'Failed to load content');
@@ -97,8 +149,6 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
         loadedContent?.classList.remove('hidden');
 
         // Render the portable text content
-        // For now, we'll render a simplified version
-        // In production, you'd want to use a proper Portable Text renderer
         if (data.body && Array.isArray(data.body)) {
           const html = renderPortableText(data.body);
           if (loadedContent) {
@@ -125,7 +175,6 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
           const content = renderChildren(block.children || []);
           return `<${tag}${className ? ` class="${className}"` : ''}>${content}</${tag}>`;
         }
-        // Handle other block types as needed
         return '';
       }).join('');
     }
@@ -176,5 +225,50 @@ const { documentId, isAuthenticated, returnUrl = '' } = Astro.props;
     }
 
     fetchProtectedContent();
+
+    // Handle request access form submission
+    const requestForm = container.querySelector('.request-access-form') as HTMLFormElement;
+    const requestSuccess = container.querySelector('.request-success');
+    const requestError = container.querySelector('.request-error');
+
+    requestForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const submitButton = requestForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+      submitButton.disabled = true;
+      submitButton.textContent = 'Sending...';
+
+      requestSuccess?.classList.add('hidden');
+      requestError?.classList.add('hidden');
+
+      try {
+        const formData = new FormData(requestForm);
+
+        const response = await fetch('/api/content/request-access', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          requestForm.classList.add('hidden');
+          requestSuccess?.classList.remove('hidden');
+        } else {
+          if (requestError) {
+            requestError.textContent = data.error || 'Failed to send request';
+            requestError.classList.remove('hidden');
+          }
+        }
+      } catch (error) {
+        if (requestError) {
+          requestError.textContent = 'An error occurred. Please try again.';
+          requestError.classList.remove('hidden');
+        }
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Request Access';
+      }
+    });
   });
 </script>

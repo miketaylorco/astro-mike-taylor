@@ -33,6 +33,19 @@ CREATE TABLE IF NOT EXISTS public.content_access_log (
   user_agent TEXT
 );
 
+-- Access requests from users
+CREATE TABLE IF NOT EXISTS public.access_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  sanity_document_id TEXT NOT NULL,
+  post_title TEXT,
+  message TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+  requested_at TIMESTAMPTZ DEFAULT NOW(),
+  responded_at TIMESTAMPTZ,
+  UNIQUE(user_id, sanity_document_id)
+);
+
 -- =============================================================================
 -- 2. CREATE INDEXES
 -- =============================================================================
@@ -46,6 +59,10 @@ CREATE INDEX IF NOT EXISTS idx_article_access_user_document ON public.article_ac
 CREATE INDEX IF NOT EXISTS idx_content_access_log_user_id ON public.content_access_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_content_access_log_accessed_at ON public.content_access_log(accessed_at DESC);
 
+-- Index for access requests
+CREATE INDEX IF NOT EXISTS idx_access_requests_user_id ON public.access_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_access_requests_status ON public.access_requests(status);
+
 -- =============================================================================
 -- 3. ENABLE ROW LEVEL SECURITY
 -- =============================================================================
@@ -53,6 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_content_access_log_accessed_at ON public.content_
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.article_access ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.content_access_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.access_requests ENABLE ROW LEVEL SECURITY;
 
 -- =============================================================================
 -- 4. CREATE RLS POLICIES
@@ -73,6 +91,13 @@ CREATE POLICY "Users can view own access" ON public.article_access
 -- Content Access Log: Users can view their own access history
 CREATE POLICY "Users can view own access history" ON public.content_access_log
   FOR SELECT USING (auth.uid() = user_id);
+
+-- Access Requests: Users can view and insert their own requests
+CREATE POLICY "Users can view own requests" ON public.access_requests
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own requests" ON public.access_requests
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- =============================================================================
 -- 5. CREATE FUNCTION TO HANDLE NEW USER SIGNUP
@@ -113,11 +138,13 @@ GRANT SELECT ON public.profiles TO authenticated;
 GRANT UPDATE ON public.profiles TO authenticated;
 GRANT SELECT ON public.article_access TO authenticated;
 GRANT SELECT ON public.content_access_log TO authenticated;
+GRANT SELECT, INSERT ON public.access_requests TO authenticated;
 
 -- Service role has full access (used by admin operations)
 GRANT ALL ON public.profiles TO service_role;
 GRANT ALL ON public.article_access TO service_role;
 GRANT ALL ON public.content_access_log TO service_role;
+GRANT ALL ON public.access_requests TO service_role;
 
 -- =============================================================================
 -- VERIFICATION QUERIES (run these to verify setup)

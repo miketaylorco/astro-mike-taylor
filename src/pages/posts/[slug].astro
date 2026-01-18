@@ -110,38 +110,33 @@ const portableTextComponents = {
     <p>Published: {new Date(post.publishedAt).toLocaleDateString()}</p>
 
     {isProtected ? (
-      <>
-        {!isAuthenticated && (
-          <>
-            {Array.isArray(post.teaser) && post.teaser.length > 0 && (
-              <div class="teaser-content mb-8">
-                <PortableText
-                  value={post.teaser}
-                  components={portableTextComponents}
-                />
-              </div>
-            )}
-
-            {teaserImageUrl && (
-              <img
-                src={teaserImageUrl}
-                alt={`${post.title} teaser`}
-                class="rounded-lg mb-8"
-                width="550"
-                height="310"
+      <ProtectedContent
+        documentId={post._id}
+        isAuthenticated={isAuthenticated}
+        returnUrl={returnUrl}
+        postTitle={post.title}
+      >
+        <Fragment slot="teaser">
+          {Array.isArray(post.teaser) && post.teaser.length > 0 && (
+            <div class="teaser-content mb-8">
+              <PortableText
+                value={post.teaser}
+                components={portableTextComponents}
               />
-            )}
+            </div>
+          )}
 
-            <div class="border-t border-gray-200 my-8 pt-8" />
-          </>
-        )}
-
-        <ProtectedContent
-          documentId={post._id}
-          isAuthenticated={isAuthenticated}
-          returnUrl={returnUrl}
-        />
-      </>
+          {teaserImageUrl && (
+            <img
+              src={teaserImageUrl}
+              alt={`${post.title} teaser`}
+              class="rounded-lg mb-8"
+              width="550"
+              height="310"
+            />
+          )}
+        </Fragment>
+      </ProtectedContent>
     ) : (
       Array.isArray(post.body) && (
         <PortableText
