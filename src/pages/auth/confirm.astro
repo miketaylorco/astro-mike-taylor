@@ -2,8 +2,9 @@
 import Main from '../../layouts/main.astro';
 const contentProps = { title: "Confirming..." };
 
-// This page handles the implicit auth flow where tokens come in the URL hash
-// Hash fragments are only available client-side, so we need JavaScript
+// This page handles both auth flows:
+// 1. PKCE flow: code in query params (from magic links)
+// 2. Implicit flow: tokens in URL hash (from invite links)
 ---
 
 <Main content={contentProps}>
@@ -27,34 +28,44 @@ const contentProps = { title: "Confirming..." };
     const messageEl = document.getElementById('message');
 
     try {
-      // Check if we have hash parameters (implicit flow from invite links)
+      const urlParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash;
 
+      // Check for PKCE flow (code in query params)
+      const code = urlParams.get('code');
+
+      // Check for implicit flow (tokens in hash)
       let accessToken: string | null = null;
       let refreshToken: string | null = null;
 
       if (hash && hash.length > 1) {
-        // Parse hash parameters
         const hashParams = new URLSearchParams(hash.substring(1));
         accessToken = hashParams.get('access_token');
         refreshToken = hashParams.get('refresh_token');
       }
 
-      if (!accessToken || !refreshToken) {
+      let response: Response;
+
+      if (code) {
+        // PKCE flow - exchange code for session
+        response = await fetch('/api/auth/exchange-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+      } else if (accessToken && refreshToken) {
+        // Implicit flow - set session from tokens
+        response = await fetch('/api/auth/set-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          }),
+        });
+      } else {
         throw new Error('No authentication tokens found in URL');
       }
-
-      // Send tokens to server to set cookies
-      const response = await fetch('/api/auth/set-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }),
-      });
 
       const data = await response.json();
 
@@ -66,11 +77,10 @@ const contentProps = { title: "Confirming..." };
       if (statusEl) statusEl.textContent = 'Success!';
       if (messageEl) messageEl.textContent = 'Redirecting...';
 
-      // Clear the hash from URL for cleanliness
+      // Clear the hash/params from URL for cleanliness
       history.replaceState(null, '', window.location.pathname);
 
-      // Check for a 'next' parameter to redirect back to original page
-      const urlParams = new URLSearchParams(window.location.search);
+      // Get the 'next' parameter for redirect
       const next = urlParams.get('next') || '/';
 
       // Redirect to the intended destination
