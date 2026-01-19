@@ -146,6 +146,13 @@ const pendingRequestsCount = pendingRequests?.length || 0;
                   >
                     Deny
                   </button>
+                  <button
+                    class="full-access-request px-3 py-1 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
+                    data-user-id={request.user_id}
+                    data-request-id={request.id}
+                  >
+                    Full Access
+                  </button>
                 </div>
               </div>
             </li>
@@ -341,6 +348,61 @@ const pendingRequestsCount = pendingRequests?.length || 0;
         alert('An error occurred. Please try again.');
         target.disabled = false;
         target.textContent = 'Deny';
+      }
+    });
+  });
+
+  document.querySelectorAll('.full-access-request').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const target = e.target as HTMLButtonElement;
+      const requestId = target.dataset.requestId;
+      const userId = target.dataset.userId;
+
+      if (!requestId || !userId) return;
+
+      if (!confirm('Grant this user full access to ALL protected content?')) return;
+
+      target.disabled = true;
+      target.innerHTML = `${spinnerSvg}Granting...`;
+
+      // Disable sibling buttons too
+      const siblingButtons = target.parentElement?.querySelectorAll('button');
+      siblingButtons?.forEach(btn => btn.disabled = true);
+
+      try {
+        const response = await fetch('/api/admin/respond-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestId,
+            action: 'grant_full_access',
+            userId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Remove the request item from the list
+          const listItem = target.closest('li');
+          if (listItem) {
+            listItem.style.opacity = '0.5';
+            listItem.innerHTML = '<div class="py-4 text-amber-600">Full access granted</div>';
+            setTimeout(() => listItem.remove(), 2000);
+          }
+        } else {
+          alert('Error: ' + (result.error || 'Failed to grant full access'));
+          target.disabled = false;
+          target.textContent = 'Full Access';
+          siblingButtons?.forEach(btn => btn.disabled = false);
+        }
+      } catch (error) {
+        console.error('Error granting full access:', error);
+        alert('An error occurred. Please try again.');
+        target.disabled = false;
+        target.textContent = 'Full Access';
+        const siblingButtons = target.parentElement?.querySelectorAll('button');
+        siblingButtons?.forEach(btn => btn.disabled = false);
       }
     });
   });

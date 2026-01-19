@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getUser, isAdmin, createSupabaseAdminClient } from '../../../lib/supabase';
-import { sendAccessGrantedEmail } from '../../../lib/email';
+import { sendAccessGrantedEmail, sendFullAccessGrantedEmail } from '../../../lib/email';
 import { sanityClient } from "sanity:client";
 
 export const prerender = false;
@@ -33,8 +33,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     });
   }
 
-  if (action !== 'approve' && action !== 'deny') {
-    return new Response(JSON.stringify({ error: 'Action must be "approve" or "deny"' }), {
+  if (action !== 'approve' && action !== 'deny' && action !== 'grant_full_access') {
+    return new Response(JSON.stringify({ error: 'Action must be "approve", "deny", or "grant_full_access"' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -43,11 +43,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const supabaseAdmin = createSupabaseAdminClient();
 
   try {
-    // Update the request status
+    // Update the request status (grant_full_access counts as approved)
     const { error: updateError } = await supabaseAdmin
       .from('access_requests')
       .update({
-        status: action === 'approve' ? 'approved' : 'denied',
+        status: action === 'deny' ? 'denied' : 'approved',
         responded_at: new Date().toISOString(),
       })
       .eq('id', requestId);
@@ -111,9 +111,51 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       }
     }
 
+    // If granting full access, update the user's profile and send email
+    if (action === 'grant_full_access' && userId) {
+      const { error: fullAccessError } = await supabaseAdmin
+        .from('profiles')
+        .update({ has_full_access: true })
+        .eq('id', userId);
+
+      if (fullAccessError) {
+        console.error('Error granting full access:', fullAccessError);
+        return new Response(JSON.stringify({ error: 'Request updated but failed to grant full access' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Send email notification to the user
+      try {
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        if (profile?.email) {
+          const origin = new URL(request.url).origin;
+          await sendFullAccessGrantedEmail({
+            userEmail: profile.email,
+            siteUrl: origin,
+          });
+        }
+      } catch (emailError) {
+        // Don't fail the request if email fails - full access was still granted
+        console.error('Failed to send full access granted email:', emailError);
+      }
+    }
+
+    const messages: Record<string, string> = {
+      approve: 'Access granted successfully',
+      deny: 'Request denied',
+      grant_full_access: 'Full access granted successfully',
+    };
+
     return new Response(JSON.stringify({
       success: true,
-      message: action === 'approve' ? 'Access granted successfully' : 'Request denied',
+      message: messages[action],
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

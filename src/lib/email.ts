@@ -19,6 +19,11 @@ interface AccessGrantedEmailParams {
   postUrl: string;
 }
 
+interface FullAccessGrantedEmailParams {
+  userEmail: string;
+  siteUrl: string;
+}
+
 export async function sendAccessGrantedEmail(params: AccessGrantedEmailParams): Promise<boolean> {
   const { userEmail, postTitle, postUrl } = params;
 
@@ -87,6 +92,80 @@ Read the article here: ${postUrl}
 
   } catch (error) {
     console.error('Error sending access granted email:', error);
+    return false;
+  }
+}
+
+export async function sendFullAccessGrantedEmail(params: FullAccessGrantedEmailParams): Promise<boolean> {
+  const { userEmail, siteUrl } = params;
+
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not configured - skipping email notification');
+    return false;
+  }
+
+  const subject = 'Full Access Granted';
+
+  const htmlContent = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a1a1a;">Full Access Granted!</h2>
+
+      <p>Great news! You have been granted <strong>full access</strong> to all protected content on our site.</p>
+
+      <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+        <p style="margin: 0; color: #92400e;">
+          You can now read any protected article without needing to request access individually.
+        </p>
+      </div>
+
+      <p>
+        <a href="${siteUrl}" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+          Browse Content
+        </a>
+      </p>
+
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        Enjoy exploring all the content available to you!
+      </p>
+    </div>
+  `;
+
+  const textContent = `
+Full Access Granted!
+
+Great news! You have been granted full access to all protected content on our site.
+
+You can now read any protected article without needing to request access individually.
+
+Browse content here: ${siteUrl}
+  `.trim();
+
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: userEmail,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Failed to send full access granted email:', error);
+      return false;
+    }
+
+    return true;
+
+  } catch (error) {
+    console.error('Error sending full access granted email:', error);
     return false;
   }
 }
