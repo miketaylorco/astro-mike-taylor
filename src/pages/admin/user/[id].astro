@@ -142,18 +142,59 @@ const hasFullAccess = profile.has_full_access || false;
                 <div class="font-medium">{article.title}</div>
                 <div class="text-sm text-gray-500">{article._id}</div>
               </div>
-              <button
-                type="button"
-                class="access-toggle px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                data-user-id={userId}
-                data-article-id={article._id}
-                data-has-access={hasAccess.toString()}
-                style={hasAccess
-                  ? "background-color: rgb(220 38 38); color: white;"
-                  : "background-color: rgb(22 163 74); color: white;"}
-              >
-                {hasAccess ? 'Revoke Access' : 'Grant Access'}
-              </button>
+              {hasAccess ? (
+                <button
+                  type="button"
+                  class="access-toggle px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  data-user-id={userId}
+                  data-article-id={article._id}
+                  data-has-access="true"
+                  style="background-color: rgb(220 38 38); color: white;"
+                >
+                  Revoke Access
+                </button>
+              ) : (
+                <div class="relative inline-flex grant-access-dropdown">
+                  <button
+                    type="button"
+                    class="grant-btn px-4 py-2 rounded-l-lg text-sm font-medium transition-colors"
+                    data-user-id={userId}
+                    data-article-id={article._id}
+                    data-send-email="false"
+                    style="background-color: rgb(22 163 74); color: white;"
+                  >
+                    Grant Access
+                  </button>
+                  <button
+                    type="button"
+                    class="dropdown-toggle px-2 py-2 rounded-r-lg text-sm font-medium transition-colors border-l border-green-700"
+                    style="background-color: rgb(22 163 74); color: white;"
+                    aria-label="More options"
+                  >
+                    ▼
+                  </button>
+                  <div class="dropdown-menu hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[180px]">
+                    <button
+                      type="button"
+                      class="dropdown-item w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-t-lg"
+                      data-user-id={userId}
+                      data-article-id={article._id}
+                      data-send-email="false"
+                    >
+                      Grant Access
+                    </button>
+                    <button
+                      type="button"
+                      class="dropdown-item w-full text-left px-4 py-2 text-sm hover:bg-gray-100 rounded-b-lg"
+                      data-user-id={userId}
+                      data-article-id={article._id}
+                      data-send-email="true"
+                    >
+                      Grant Access + Notify
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -241,21 +282,18 @@ const hasFullAccess = profile.has_full_access || false;
     });
   }
 
-  // Article access toggle handlers
+  // Article access toggle handlers (for revoke buttons)
   document.querySelectorAll('.access-toggle').forEach(button => {
     button.addEventListener('click', async (e) => {
       const btn = e.target as HTMLButtonElement;
       const userId = btn.dataset.userId;
       const articleId = btn.dataset.articleId;
-      const hasAccess = btn.dataset.hasAccess === 'true';
 
       btn.disabled = true;
       btn.textContent = 'Loading...';
 
       try {
-        const endpoint = hasAccess ? '/api/admin/revoke-access' : '/api/admin/grant-access';
-
-        const response = await fetch(endpoint, {
+        const response = await fetch('/api/admin/revoke-access', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -267,22 +305,121 @@ const hasFullAccess = profile.has_full_access || false;
         });
 
         if (response.ok) {
-          // Toggle the state
-          const newHasAccess = !hasAccess;
-          btn.dataset.hasAccess = newHasAccess.toString();
-          btn.textContent = newHasAccess ? 'Revoke Access' : 'Grant Access';
-          btn.style.backgroundColor = newHasAccess ? 'rgb(220 38 38)' : 'rgb(22 163 74)';
+          // Reload the page to reflect changes
+          window.location.reload();
         } else {
           const data = await response.json();
           alert(data.error || 'Operation failed');
-          btn.textContent = hasAccess ? 'Revoke Access' : 'Grant Access';
+          btn.textContent = 'Revoke Access';
         }
       } catch (error) {
         alert('An error occurred');
-        btn.textContent = hasAccess ? 'Revoke Access' : 'Grant Access';
+        btn.textContent = 'Revoke Access';
       } finally {
         btn.disabled = false;
       }
+    });
+  });
+
+  // Grant access function
+  async function grantAccess(userId: string, articleId: string, sendEmail: boolean, triggerBtn: HTMLButtonElement) {
+    const dropdown = triggerBtn.closest('.grant-access-dropdown');
+    const mainBtn = dropdown?.querySelector('.grant-btn') as HTMLButtonElement;
+    const dropdownToggle = dropdown?.querySelector('.dropdown-toggle') as HTMLButtonElement;
+
+    if (mainBtn) {
+      mainBtn.disabled = true;
+      mainBtn.textContent = 'Loading...';
+    }
+    if (dropdownToggle) {
+      dropdownToggle.disabled = true;
+    }
+
+    try {
+      const response = await fetch('/api/admin/grant-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          sanityDocumentId: articleId,
+          sendEmail,
+        }),
+      });
+
+      if (response.ok) {
+        // Reload the page to reflect changes
+        window.location.reload();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Operation failed');
+        if (mainBtn) {
+          mainBtn.textContent = 'Grant Access';
+        }
+      }
+    } catch (error) {
+      alert('An error occurred');
+      if (mainBtn) {
+        mainBtn.textContent = 'Grant Access';
+      }
+    } finally {
+      if (mainBtn) {
+        mainBtn.disabled = false;
+      }
+      if (dropdownToggle) {
+        dropdownToggle.disabled = false;
+      }
+    }
+  }
+
+  // Main grant button click handlers
+  document.querySelectorAll('.grant-btn').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const btn = e.target as HTMLButtonElement;
+      const userId = btn.dataset.userId!;
+      const articleId = btn.dataset.articleId!;
+      const sendEmail = btn.dataset.sendEmail === 'true';
+      await grantAccess(userId, articleId, sendEmail, btn);
+    });
+  });
+
+  // Dropdown toggle handlers
+  document.querySelectorAll('.dropdown-toggle').forEach(button => {
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = (e.target as HTMLElement).closest('.grant-access-dropdown');
+      const menu = dropdown?.querySelector('.dropdown-menu');
+
+      // Close all other dropdowns first
+      document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m !== menu) m.classList.add('hidden');
+      });
+
+      menu?.classList.toggle('hidden');
+    });
+  });
+
+  // Dropdown item click handlers
+  document.querySelectorAll('.dropdown-item').forEach(button => {
+    button.addEventListener('click', async (e) => {
+      const btn = e.target as HTMLButtonElement;
+      const userId = btn.dataset.userId!;
+      const articleId = btn.dataset.articleId!;
+      const sendEmail = btn.dataset.sendEmail === 'true';
+
+      // Close dropdown
+      const menu = btn.closest('.dropdown-menu');
+      menu?.classList.add('hidden');
+
+      await grantAccess(userId, articleId, sendEmail, btn);
+    });
+  });
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+      menu.classList.add('hidden');
     });
   });
 </script>

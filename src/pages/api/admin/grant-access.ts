@@ -1,5 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient, isAdmin } from '../../../lib/supabase';
+import { sendAccessGrantedEmail } from '../../../lib/email';
+import { sanityClient } from "sanity:client";
 
 export const prerender = false;
 
@@ -22,7 +24,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   }
 
   const body = await request.json();
-  const { userId, sanityDocumentId, expiresAt } = body;
+  const { userId, sanityDocumentId, expiresAt, sendEmail } = body;
 
   if (!userId || !sanityDocumentId) {
     return new Response(JSON.stringify({ error: 'userId and sanityDocumentId are required' }), {
@@ -54,10 +56,45 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       });
     }
 
+    // Send email notification if requested
+    let emailSent = false;
+    if (sendEmail) {
+      try {
+        // Get user email from profiles table
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        // Get article details from Sanity
+        const article = await sanityClient.fetch(
+          `*[_id == $docId][0]{ title, "slug": slug.current }`,
+          { docId: sanityDocumentId }
+        );
+
+        if (profile?.email && article?.title) {
+          const postUrl = article.slug
+            ? `${new URL(request.url).origin}/posts/${article.slug}`
+            : `${new URL(request.url).origin}/posts`;
+
+          emailSent = await sendAccessGrantedEmail({
+            userEmail: profile.email,
+            postTitle: article.title,
+            postUrl,
+          });
+        }
+      } catch (emailError) {
+        console.error('Error sending access granted email:', emailError);
+        // Don't fail the request if email fails - access was still granted
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Access granted successfully',
       access: data,
+      emailSent,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },

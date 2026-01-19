@@ -14,7 +14,8 @@
       "WebFetch(domain:supabase.com)",
       "mcp__Sanity__deploy_schema",
       "Bash(npm install)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cd /Users/miketaylor/My\\\\ Websites/astro-mike-taylor && npx tsc --noEmit:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
