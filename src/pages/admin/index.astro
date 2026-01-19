@@ -11,7 +11,7 @@ const contentProps = { title: "Admin Dashboard" };
 const user = await getUser(Astro.cookies);
 
 if (!user) {
-  return Astro.redirect('/auth/error?message=access_denied');
+  return Astro.redirect('/auth/signin?next=/admin');
 }
 
 if (!isAdmin(user.email)) {

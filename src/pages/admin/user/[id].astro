@@ -7,21 +7,21 @@ export const prerender = false;
 
 const contentProps = { title: "Manage User" };
 
-// Check authentication and admin status
-const user = await getUser(Astro.cookies);
-
-if (!user) {
-  return Astro.redirect('/auth/error?message=access_denied');
-}
-
-if (!isAdmin(user.email)) {
-  return Astro.redirect('/auth/error?message=access_denied');
-}
-
 const { id: userId } = Astro.params;
 
 if (!userId) {
   return Astro.redirect('/admin');
+}
+
+// Check authentication and admin status
+const user = await getUser(Astro.cookies);
+
+if (!user) {
+  return Astro.redirect(`/auth/signin?next=/admin/user/${userId}`);
+}
+
+if (!isAdmin(user.email)) {
+  return Astro.redirect('/auth/error?message=access_denied');
 }
 
 const supabaseAdmin = createSupabaseAdminClient();

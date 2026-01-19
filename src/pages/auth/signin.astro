@@ -1,0 +1,73 @@
+---
+import Main from '../../layouts/main.astro';
+import { getUser } from '../../lib/supabase';
+
+export const prerender = false;
+
+const contentProps = { title: "Sign In" };
+
+const user = await getUser(Astro.cookies);
+const next = Astro.url.searchParams.get('next') || '/';
+
+// If already logged in, redirect to destination
+if (user) {
+  return Astro.redirect(next);
+}
+---
+
+<Main content={contentProps}>
+  <main class="container mx-auto min-h-screen max-w-md p-8 flex items-center justify-center">
+    <div class="w-full">
+      <div class="bg-gradient-to-b from-gray-50 to-white border border-gray-200 rounded-lg p-8">
+        <div class="text-center mb-6">
+          <svg class="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+          <h1 class="text-xl font-semibold text-gray-900">Sign In</h1>
+          <p class="text-gray-600 mt-2">Enter your email to receive a magic link.</p>
+        </div>
+
+        <form action="/api/auth/signin" method="POST" class="space-y-4 signin-form">
+          <input type="hidden" name="next" value={next} />
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="you@example.com"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium signin-button"
+          >
+            Send Magic Link
+          </button>
+          <p class="text-xs text-gray-500 text-center">
+            Access is invite-only. If you don't have an account, contact the site administrator.
+          </p>
+        </form>
+      </div>
+
+      <p class="text-center mt-6">
+        <a href="/" class="text-gray-500 hover:underline">&larr; Back to home</a>
+      </p>
+    </div>
+  </main>
+</Main>
+
+<script>
+  const spinnerSvg = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+  const signinForm = document.querySelector('.signin-form') as HTMLFormElement;
+  signinForm?.addEventListener('submit', () => {
+    const button = signinForm.querySelector('.signin-button') as HTMLButtonElement;
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = `${spinnerSvg}Sending...`;
+    }
+  });
+</script>
