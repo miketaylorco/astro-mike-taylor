@@ -62,6 +62,9 @@ const protectedArticles = await sanityClient.fetch(`
 
 // Map access to article IDs
 const accessedArticleIds = new Set(userAccess?.map((a: any) => a.sanity_document_id) || []);
+
+// Check if user has full access
+const hasFullAccess = profile.has_full_access || false;
 ---
 
 <Main content={contentProps}>
@@ -92,6 +95,37 @@ const accessedArticleIds = new Set(userAccess?.map((a: any) => a.sanity_document
         <dd class="font-mono text-sm">{profile.id}</dd>
       </div>
     </dl>
+  </div>
+
+  <!-- Full Access Permission -->
+  <div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4">Full Access Permission</h2>
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-gray-700">
+          {hasFullAccess
+            ? 'This user has full access to all protected content.'
+            : 'Grant full access to bypass per-article permissions.'}
+        </p>
+        {hasFullAccess && (
+          <p class="text-sm text-amber-600 mt-1">
+            Individual article access settings are bypassed when full access is enabled.
+          </p>
+        )}
+      </div>
+      <button
+        type="button"
+        id="full-access-toggle"
+        class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        data-user-id={userId}
+        data-has-full-access={hasFullAccess.toString()}
+        style={hasFullAccess
+          ? "background-color: rgb(220 38 38); color: white;"
+          : "background-color: rgb(22 163 74); color: white;"}
+      >
+        {hasFullAccess ? 'Revoke Full Access' : 'Grant Full Access'}
+      </button>
+    </div>
   </div>
 
   <!-- Article Access -->
@@ -168,6 +202,46 @@ const accessedArticleIds = new Set(userAccess?.map((a: any) => a.sanity_document
 </Main>
 
 <script>
+  // Full access toggle handler
+  const fullAccessBtn = document.getElementById('full-access-toggle') as HTMLButtonElement;
+  if (fullAccessBtn) {
+    fullAccessBtn.addEventListener('click', async () => {
+      const userId = fullAccessBtn.dataset.userId;
+      const hasFullAccess = fullAccessBtn.dataset.hasFullAccess === 'true';
+
+      fullAccessBtn.disabled = true;
+      fullAccessBtn.textContent = 'Loading...';
+
+      try {
+        const response = await fetch('/api/admin/set-full-access', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            hasFullAccess: !hasFullAccess,
+          }),
+        });
+
+        if (response.ok) {
+          // Reload the page to reflect changes
+          window.location.reload();
+        } else {
+          const data = await response.json();
+          alert(data.error || 'Operation failed');
+          fullAccessBtn.textContent = hasFullAccess ? 'Revoke Full Access' : 'Grant Full Access';
+        }
+      } catch (error) {
+        alert('An error occurred');
+        fullAccessBtn.textContent = hasFullAccess ? 'Revoke Full Access' : 'Grant Full Access';
+      } finally {
+        fullAccessBtn.disabled = false;
+      }
+    });
+  }
+
+  // Article access toggle handlers
   document.querySelectorAll('.access-toggle').forEach(button => {
     button.addEventListener('click', async (e) => {
       const btn = e.target as HTMLButtonElement;

@@ -24,6 +24,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const formData = await request.formData();
   const email = formData.get('email')?.toString();
   const displayName = formData.get('displayName')?.toString();
+  const fullAccess = formData.get('fullAccess')?.toString() === 'true';
   const articleIds = formData.getAll('articleIds').map(id => id.toString()).filter(Boolean);
 
   if (!email) {
@@ -60,6 +61,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       id: userId,
       email,
       display_name: displayName || null,
+      has_full_access: fullAccess,
     }, {
       onConflict: 'id',
     });

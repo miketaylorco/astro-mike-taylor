@@ -10,8 +10,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT NOT NULL,
   display_name TEXT,
+  has_full_access BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: Add has_full_access column if it doesn't exist
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS has_full_access BOOLEAN DEFAULT FALSE;
 
 -- Article access permissions
 CREATE TABLE IF NOT EXISTS public.article_access (

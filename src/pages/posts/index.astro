@@ -30,14 +30,25 @@ const posts = await sanityClient.fetch<SanityDocument[]>(POSTS_QUERY);
 
 // For authenticated users, check which protected posts they have access to
 let accessiblePostIds = new Set<string>();
+let userHasFullAccess = false;
 
 if (isAuthenticated && user) {
-  if (userIsAdmin) {
-    // Admins have access to all posts
+  const supabaseAdmin = createSupabaseAdminClient();
+
+  // Check if user has full access
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('has_full_access')
+    .eq('id', user.id)
+    .single();
+
+  userHasFullAccess = !!profile?.has_full_access;
+
+  if (userIsAdmin || userHasFullAccess) {
+    // Admins and full access users have access to all posts
     accessiblePostIds = new Set(posts.filter(p => p.accessLevel === 'protected').map(p => p._id));
   } else {
     // Check article_access table for this user
-    const supabaseAdmin = createSupabaseAdminClient();
     const protectedPostIds = posts.filter(p => p.accessLevel === 'protected').map(p => p._id);
 
     if (protectedPostIds.length > 0) {

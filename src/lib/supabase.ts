@@ -98,10 +98,33 @@ export async function getUser(cookies: AstroCookies, responseHeaders?: Headers) 
   return user;
 }
 
+// Check if user has full access to all protected content
+export async function hasFullAccess(userId: string): Promise<boolean> {
+  const supabase = createSupabaseAdminClient();
+  const { data } = await supabase
+    .from('profiles')
+    .select('has_full_access')
+    .eq('id', userId)
+    .single();
+  return !!data?.has_full_access;
+}
+
 // Check if user has access to a specific article
 export async function checkArticleAccess(userId: string, sanityDocumentId: string): Promise<boolean> {
   const supabase = createSupabaseAdminClient();
 
+  // First check if user has full access
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('has_full_access')
+    .eq('id', userId)
+    .single();
+
+  if (profile?.has_full_access) {
+    return true;
+  }
+
+  // Fall back to per-article access check
   const { data, error } = await supabase
     .from('article_access')
     .select('id, expires_at')

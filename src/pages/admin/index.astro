@@ -21,7 +21,7 @@ if (!isAdmin(user.email)) {
 // Fetch data for dashboard
 const supabaseAdmin = createSupabaseAdminClient();
 
-// Get users with their access counts
+// Get users with their access counts and full access status
 const { data: users } = await supabaseAdmin
   .from('profiles')
   .select('*, article_access(count)')
@@ -165,11 +165,20 @@ const pendingRequestsCount = pendingRequests?.length || 0;
             <li class="py-3">
               <a href={`/admin/user/${profile.id}`} class="flex items-center justify-between hover:bg-gray-50 -mx-2 px-2 py-1 rounded">
                 <div>
-                  <div class="font-medium">{profile.display_name || profile.email}</div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">{profile.display_name || profile.email}</span>
+                    {profile.has_full_access && (
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        Full Access
+                      </span>
+                    )}
+                  </div>
                   <div class="text-sm text-gray-500">{profile.email}</div>
                 </div>
                 <div class="text-sm text-gray-500">
-                  {profile.article_access?.[0]?.count || 0} articles
+                  {profile.has_full_access
+                    ? 'All articles'
+                    : `${profile.article_access?.[0]?.count || 0} articles`}
                 </div>
               </a>
             </li>
