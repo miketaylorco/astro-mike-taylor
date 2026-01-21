@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient } from '../../../lib/supabase';
 import { sendAccessRequestEmail } from '../../../lib/email';
+import { sanitizeInput } from '../../../lib/security';
 
 export const prerender = false;
 
@@ -17,8 +18,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const formData = await request.formData();
   const documentId = formData.get('documentId')?.toString();
-  const postTitle = formData.get('postTitle')?.toString();
-  const message = formData.get('message')?.toString();
+  const postTitle = sanitizeInput(formData.get('postTitle')?.toString(), 200);
+  const message = sanitizeInput(formData.get('message')?.toString(), 1000);
 
   if (!documentId) {
     return new Response(JSON.stringify({ error: 'Document ID is required' }), {

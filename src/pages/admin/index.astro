@@ -69,7 +69,9 @@ const pendingRequestsCount = pendingRequests?.length || 0;
     <h1 class="text-3xl font-bold">Admin Dashboard</h1>
     <div class="flex items-center gap-4">
       <a href="/" class="text-gray-500 hover:underline">View Site</a>
-      <a href="/api/auth/signout" class="text-gray-500 hover:underline">Sign out</a>
+      <form action="/api/auth/signout" method="POST" class="inline">
+        <button type="submit" class="text-gray-500 hover:underline">Sign out</button>
+      </form>
     </div>
   </div>
 

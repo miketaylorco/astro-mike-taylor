@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient, isAdmin } from '../../../lib/supabase';
+import { isValidEmail } from '../../../lib/security';
 
 export const prerender = false;
 
@@ -29,6 +30,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (!email) {
     return new Response(JSON.stringify({ error: 'Email is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isValidEmail(email)) {
+    return new Response(JSON.stringify({ error: 'Invalid email format' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

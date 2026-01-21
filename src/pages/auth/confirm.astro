@@ -23,6 +23,23 @@ const contentProps = { title: "Confirming..." };
 </Main>
 
 <script>
+  // Validate redirect URL to prevent open redirects
+  function isValidRedirectUrl(url: string): boolean {
+    if (!url || !url.trim()) return true;
+    if (url.startsWith('/') && !url.startsWith('//')) return true;
+    try {
+      const parsed = new URL(url);
+      return parsed.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  function sanitizeRedirectUrl(url: string | null): string {
+    const target = url?.trim() || '/';
+    return isValidRedirectUrl(target) ? target : '/';
+  }
+
   async function handleAuthCallback() {
     const statusEl = document.getElementById('status');
     const messageEl = document.getElementById('message');
@@ -80,8 +97,8 @@ const contentProps = { title: "Confirming..." };
       // Clear the hash/params from URL for cleanliness
       history.replaceState(null, '', window.location.pathname);
 
-      // Get the 'next' parameter for redirect
-      const next = urlParams.get('next') || '/';
+      // Get the 'next' parameter for redirect (validated to prevent open redirects)
+      const next = sanitizeRedirectUrl(urlParams.get('next'));
 
       // Redirect to the intended destination
       setTimeout(() => {

@@ -81,7 +81,9 @@ const portableTextComponents = {
   <div class="flex items-center justify-between">
     <a href="/posts" class="hover:underline">&larr; Back to posts</a>
     {isAuthenticated && (
-      <a href="/api/auth/signout" class="text-sm text-gray-500 hover:underline">Sign out</a>
+      <form action="/api/auth/signout" method="POST" class="inline">
+        <button type="submit" class="text-sm text-gray-500 hover:underline">Sign out</button>
+      </form>
     )}
   </div>
 

@@ -71,7 +71,9 @@ if (isAuthenticated && user) {
   <div class="flex items-center justify-between mb-8">
     <h1 class="text-4xl font-bold">{posts.length} Post{posts.length != 1 && "s"}</h1>
     {isAuthenticated && (
-      <a href="/api/auth/signout" class="text-sm text-gray-500 hover:underline">Sign out</a>
+      <form action="/api/auth/signout" method="POST" class="inline">
+        <button type="submit" class="text-sm text-gray-500 hover:underline">Sign out</button>
+      </form>
     )}
   </div>
 

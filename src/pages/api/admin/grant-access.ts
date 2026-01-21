@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient, isAdmin } from '../../../lib/supabase';
 import { sendAccessGrantedEmail } from '../../../lib/email';
 import { sanityClient } from "sanity:client";
+import { isValidUUID } from '../../../lib/security';
 
 export const prerender = false;
 
@@ -28,6 +29,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   if (!userId || !sanityDocumentId) {
     return new Response(JSON.stringify({ error: 'userId and sanityDocumentId are required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isValidUUID(userId)) {
+    return new Response(JSON.stringify({ error: 'Invalid userId format' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -1,15 +1,27 @@
 import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../../lib/supabase';
+import { sanitizeRedirectUrl, isValidEmail } from '../../../lib/security';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const formData = await request.formData();
   const email = formData.get('email')?.toString();
-  const next = formData.get('next')?.toString() || '/';
+  const nextParam = formData.get('next')?.toString();
+
+  // Validate redirect URL to prevent open redirect attacks
+  const origin = new URL(request.url).origin;
+  const next = sanitizeRedirectUrl(nextParam, origin);
 
   if (!email) {
     return new Response(JSON.stringify({ error: 'Email is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!isValidEmail(email)) {
+    return new Response(JSON.stringify({ error: 'Invalid email format' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -20,7 +32,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const supabase = createSupabaseServerClient(cookies, responseHeaders);
 
   // Build redirect URL with the 'next' parameter
-  const origin = new URL(request.url).origin;
   const redirectUrl = `${origin}/auth/confirm?next=${encodeURIComponent(next)}`;
 
   // Request magic link - invite-only mode (shouldCreateUser: false)
