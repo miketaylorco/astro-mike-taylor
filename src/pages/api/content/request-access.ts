@@ -2,8 +2,13 @@ import type { APIRoute } from 'astro';
 import { getUser, createSupabaseAdminClient } from '../../../lib/supabase';
 import { sendAccessRequestEmail } from '../../../lib/email';
 import { sanitizeInput } from '../../../lib/security';
+import { checkRateLimit, rateLimitResponse } from '../../../lib/rate-limit';
 
 export const prerender = false;
+
+// Rate limit: 10 requests per hour per user
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   // Check if user is authenticated
@@ -14,6 +19,13 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // Check rate limit per user
+  const rateLimit = checkRateLimit(`request-access:${user.id}`, RATE_LIMIT, RATE_WINDOW_MS);
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetAt);
   }
 
   const formData = await request.formData();

@@ -1,9 +1,22 @@
 import type { APIRoute } from 'astro';
 import { createSupabaseServerClient } from '../../../lib/supabase';
+import { checkRateLimit, getClientIP, rateLimitResponse } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
+// Rate limit: 10 requests per minute per IP
+const RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60 * 1000;
+
 export const POST: APIRoute = async ({ request, cookies }) => {
+  // Check rate limit before processing
+  const clientIP = getClientIP(request);
+  const rateLimit = checkRateLimit(`set-session:${clientIP}`, RATE_LIMIT, RATE_WINDOW_MS);
+
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.resetAt);
+  }
+
   try {
     const { access_token, refresh_token } = await request.json();
 
